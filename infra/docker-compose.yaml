@@ -1,0 +1,118 @@
+# =============================================================
+# Doris FE + BE + SeaTunnel 单机编排（单机环境）
+# 相对原配置的关键修正见文件末尾注释
+# 启动：docker compose up -d     停止：docker compose down
+# =============================================================
+services:
+  doris-fe:
+    image: apache/doris:fe-2.1.9
+    container_name: doris-fe
+    hostname: doris-fe
+    ports:
+      - "8030:8030"   # FE HTTP：Stream Load / Doris Sink 用这个端口
+      - "9030:9030"   # MySQL 协议查询端口（DBeaver / 后端 app.py 连这个）
+    environment:
+      - FE_SERVERS=fe1:172.20.80.2:9010
+      - FE_ID=1
+      - TZ=Asia/Shanghai
+    volumes:
+      - fe-data:/opt/apache-doris/fe/doris-meta
+      - fe-log:/opt/apache-doris/fe/log
+    networks:
+      doris-net:
+        ipv4_address: 172.20.80.2
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8030/api/bootstrap || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: always
+
+  doris-be:
+    image: apache/doris:be-2.1.9
+    container_name: doris-be
+    hostname: doris-be
+    depends_on:
+      - doris-fe
+    ports:
+      - "8040:8040"   # BE HTTP（Web UI）
+    environment:
+      - FE_SERVERS=fe1:172.20.80.2:9010
+      - BE_ADDR=172.20.80.3:9050
+      - TZ=Asia/Shanghai
+    volumes:
+      - be-data:/opt/apache-doris/be/storage
+      - be-log:/opt/apache-doris/be/log
+    networks:
+      doris-net:
+        ipv4_address: 172.20.80.3
+    restart: always
+
+  # MySQL 源库：rsync 自内网 hadoop102，解决云服务器访问不到内网 3306 的问题
+  # 首次启动会自动执行 ./mysql-init/gmall.sql 建库建表并导入 3 天数据
+  gmall-mysql:
+    image: mysql:8.0
+    container_name: gmall-mysql
+    hostname: gmall-mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      - MYSQL_ROOT_PASSWORD=000000
+      - MYSQL_DATABASE=gmall
+      - TZ=Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      doris-net:
+        ipv4_address: 172.20.80.5
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h127.0.0.1 -uroot -p000000 --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: always
+
+  seatunnel:
+    # 官方 apache/seatunnel:2.3.9 镜像 5.76GB 大层国内源缺失，
+    # 改用 seatunnel-image/build_image.sh 从官方发行包自建的本地镜像。
+    image: seatunnel-local:2.3.9
+    container_name: seatunnel
+    hostname: seatunnel
+    depends_on:
+      - doris-be
+    # 镜像默认 CMD 已保活（tail -f /dev/null），无需覆盖 entrypoint。
+    # 执行作业：docker exec seatunnel sh -c "cd $SEATUNNEL_HOME && ./bin/seatunnel.sh --config /opt/seatunnel/jobs/xxx.conf -m local"
+    volumes:
+      - /opt/seatunnel/jobs:/opt/seatunnel/jobs
+    networks:
+      doris-net:
+        ipv4_address: 172.20.80.4
+    restart: always
+
+networks:
+  doris-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.80.0/24
+
+volumes:
+  fe-data:
+  fe-log:
+  be-data:
+  be-log:
+  mysql-data:
+
+# ---------------- 相对原配置的修正说明 ----------------
+# 1. 新增自定义网络 + 静态 IP。原配置 FE_SERVERS/BE_ADDR 写死
+#    172.20.245.181，那是别人环境的容器 IP，本机不会存在，
+#    FE 与 BE 根本无法互通、BE 注册不上。现在 IP 与 subnet 对应。
+# 2. BE_ADDR 去掉 "be1:" 前缀（官方镜像要求 IP:PORT 格式）。
+# 3. seatunnel 改为本地自建镜像 seatunnel-local:2.3.9（官方镜像国内拉不到），
+#    镜像默认 CMD 保活；作业目录统一挂宿主机 /opt/seatunnel/jobs。
+# 4. 挂载路径改为官方 2.1.x 的 /opt/apache-doris/*；
+#    02 脚本会自动探测真实 DORIS_HOME，不一致时按提示改这里。
+# 5. 补日志卷、FE healthcheck、时区、BE 对 FE 的依赖顺序。
+# 6. 启动顺序由 02 脚本控制：先 FE 就绪，再起 BE。

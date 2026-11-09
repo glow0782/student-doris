@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据大屏 | 学生管理系统</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">学生管理系统</div>
+  <nav>
+    <a href="/">学生管理</a>
+    <a href="/dashboard.html" class="active">数据大屏</a>
+  </nav>
+  <div class="env">图表数据源：Doris / student_sync（DWD + ADS 已有表）</div>
+</div>
+
+<div class="wrap" id="app">
+  <div class="card">
+    <div class="card-head">
+      <h2>学生数据大屏</h2>
+      <div class="toolbar">
+        <button class="btn primary" @click="refresh" :disabled="loading">
+          {{ loading ? '刷新中…' : '刷新数据' }}
+        </button>
+        <label class="switch">
+          <input type="checkbox" v-model="autoRefresh"> 自动刷新（30 秒）
+        </label>
+        <span class="muted">更新于 {{ updatedAt || '—' }}</span>
+      </div>
+    </div>
+    <div class="stat-line">
+      <span class="kv">学生总数<b>{{ total }}</b></span>
+      <span class="kv">班级数<b>{{ classCount }}</b></span>
+      <span class="muted">数据取自已有分层表；分层作业重跑后点「刷新数据」</span>
+    </div>
+    <div class="error" v-if="error" style="margin-top:12px">{{ error }}</div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="card">
+      <div class="card-head">
+        <h2>各班人数</h2><span class="muted">柱状图 · dwd_dim_student · 可拖动滑块</span>
+      </div>
+      <div id="classChart" class="chart-box"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2>性别占比</h2><span class="muted">饼图 · ads_college_dashboard（ADS 层）</span>
+      </div>
+      <div id="genderChart" class="chart-box"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/vendor/vue.global.prod.js"></script>
+<script src="/vendor/echarts.min.js"></script>
+<script src="/vendor/axios.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/dashboard.js"></script>
+</body>
+</html>

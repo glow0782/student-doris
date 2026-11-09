@@ -1,0 +1,13 @@
+# 统一使用 LF 行尾。
+# shell 脚本、Dockerfile、conf 在 Linux 上执行，若被 Windows 转成 CRLF
+# 会出现 "bad interpreter: /bin/bash^M" 之类错误。
+* text=auto eol=lf
+
+# 二进制与压缩包不做换行转换
+*.jar  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.zip  binary
+*.gz   binary

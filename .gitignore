@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 日志与临时文件
+*.log
+*.tmp
+*.bak
+*.orig
+.DS_Store
+Thumbs.db
+
+# 本地环境与密钥（示例见 docs/deployment.md）
+.env
+.env.local
+*.pem
+*.key
+
+# 镜像与打包产物（体积大，不入库）
+*.tar
+*.tar.gz
+*.jar
+*.zip
+
+# 编辑器
+.idea/
+.vscode/

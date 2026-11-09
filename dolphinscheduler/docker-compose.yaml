@@ -1,0 +1,71 @@
+# =============================================================
+# Apache DolphinScheduler 3.2.2 Standalone（单机环境）
+# 元数据持久化到外部 MySQL（mysql 容器的 dolphinscheduler 库），重启容器不丢工作流。
+#
+# Web UI : http://<host-ip>:12345/dolphinscheduler/ui
+# 账号   : admin / dolphinscheduler123
+#
+# 启动：bash /etc/docker/dolphinscheduler/deploy.sh   （会自动准备驱动 + 初始化表）
+# 停止：docker compose down
+#
+# 【调度 SeaTunnel】容器内挂了宿主机 docker.sock + 静态 docker CLI，
+# Shell 任务可直接调用 run_seatunnel_job.sh（见同目录）。
+# =============================================================
+services:
+  dolphinscheduler:
+    image: apache/dolphinscheduler-standalone-server:3.2.2
+    container_name: dolphinscheduler
+    hostname: dolphinscheduler
+    ports:
+      - "12345:12345"   # Web UI + REST API
+      # - "25333:25333" # Python Gateway，跑 Python 任务时再放行
+    environment:
+      - TZ=Asia/Shanghai
+      # ---- 元数据切到外部 MySQL ----
+      # 镜像 application.yaml 默认硬编码 H2，靠 Spring Boot 环境变量覆盖。
+      - DATABASE=mysql
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - "SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/dolphinscheduler?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=000000
+      # 表已由 deploy.sh 用官方 dolphinscheduler_mysql.sql 初始化，禁止启动时跑 H2 建表脚本
+      - SPRING_SQL_INIT_MODE=never
+      # 镜像 start.sh 带 -XX:-UseContainerSupport，JVM 不感知 cgroup，必须显式压堆
+      - "JAVA_OPTS=-Xms512m -Xmx1536m"
+    volumes:
+      # ① 镜像只带 H2 驱动，MySQL JDBC 驱动要挂进 libs 子目录；
+      #    start.sh 会把 libs/* 下所有 jar 加入 classpath，挂到新目录 ext 最干净。
+      - /etc/docker/dolphinscheduler/drivers:/opt/dolphinscheduler/libs/ext:ro
+      # ② 调用宿主机 Docker 调度 SeaTunnel（容器内 root，socket 为 root:docker 660，可直接读写）
+      - /var/run/docker.sock:/var/run/docker.sock
+      # ③ 静态 docker CLI 24.0.9（无 glibc 依赖），用挂载而非 docker cp，重建不丢
+      - /opt/dolphinscheduler/bin/docker:/usr/local/bin/docker:ro
+      # ④ DS Shell 任务调用的作业启动脚本
+      - /opt/dolphinscheduler/bin/run_seatunnel_job.sh:/usr/local/bin/run_seatunnel_job.sh:ro
+    networks:
+      # mysql / doris-fe / doris-be / seatunnel 的服务名都在这个网络解析（172.18.0.x）
+      doris-st: {}
+      # 保留静态 IP，供 Doris Stream Load 重定向段（172.20.80.3:8040）互通
+      doris-net:
+        ipv4_address: 172.20.80.6
+    mem_limit: 3g
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/12345' || exit 1"]
+      interval: 15s
+      timeout: 8s
+      retries: 30
+      start_period: 60s
+
+networks:
+  doris-st:
+    external: true
+    name: doris-st
+  doris-net:
+    external: true
+    name: doris-st_doris-net
+
+# 说明：官方 standalone 镜像内置 H2 内存库，重启即丢元数据。
+# 本编排把数据源覆盖为外部 MySQL；表结构由 deploy.sh 用镜像自带的
+# conf/sql/dolphinscheduler_mysql.sql 初始化（含初始 admin 账号）。
+# 千万不要重复执行该 SQL —— 它含 DROP TABLE IF EXISTS，会清空已有工作流。

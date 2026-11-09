@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学生管理 | 学生管理系统</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">学生管理系统</div>
+  <nav>
+    <a href="/" class="active">学生管理</a>
+    <a href="/dashboard.html">数据大屏</a>
+  </nav>
+  <div class="env">MySQL student_management → CDC → Doris student_sync</div>
+</div>
+
+<div class="wrap" id="app">
+  <div class="card">
+    <div class="card-head">
+      <h2>学生列表 <span class="muted" style="font-weight:normal;font-size:13px">共 {{ total }} 条</span></h2>
+      <div class="toolbar">
+        <input type="text" v-model.trim="keyword" placeholder="学号 / 姓名 / 班级" @keyup.enter="resetAndLoad">
+        <button class="btn" @click="resetAndLoad" :disabled="loading">查询</button>
+        <button class="btn" @click="reset">重置</button>
+        <button class="btn primary" @click="openAdd">+ 新增学生</button>
+      </div>
+    </div>
+
+    <div class="notice" v-if="notice">{{ notice }}</div>
+    <div class="error" v-if="error" style="margin-bottom:12px">{{ error }}</div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>学号</th><th>姓名</th><th>性别</th>
+          <th>班级</th><th>状态</th><th>入学日期</th><th>联系电话</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="s in list" :key="s.id">
+          <td>{{ s.student_no }}</td>
+          <td>{{ s.name }}</td>
+          <td><span class="tag" :class="s.gender === '女' ? 'f' : ''">{{ s.gender }}</span></td>
+          <td>{{ s.class_name || ('班级#' + s.class_id) }}</td>
+          <td>{{ s.status }}</td>
+          <td class="muted">{{ s.enroll_date || '-' }}</td>
+          <td>{{ s.phone || '-' }}</td>
+          <td class="actions">
+            <button class="btn small" @click="openEdit(s)">编辑</button>
+            <button class="btn small danger" @click="remove(s)">删除</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="empty" v-if="!loading && list.length === 0">暂无学生数据</div>
+    <div class="empty" v-if="loading">加载中…</div>
+
+    <div class="pager" v-if="total > size">
+      <span class="muted">第 {{ page }} / {{ pageCount }} 页，每页 {{ size }} 条</span>
+      <button class="btn small" @click="go(page - 1)" :disabled="page <= 1 || loading">上一页</button>
+      <button class="btn small" @click="go(page + 1)" :disabled="page >= pageCount || loading">下一页</button>
+    </div>
+  </div>
+
+  <!-- 新增 / 编辑弹窗：必须放在 #app 内，Vue 才会编译其中的指令 -->
+  <div class="mask" v-if="dialog.show" @click.self="closeDialog">
+  <div class="dialog">
+    <h3>{{ dialog.mode === 'add' ? '新增学生' : '编辑学生' }}</h3>
+    <div class="form-row">
+      <label>学号 * <span class="muted" style="font-weight:normal;font-size:12px">可修改，需保持唯一；变更会由 CDC 同步到数仓</span></label>
+      <input type="text" v-model.trim="form.student_no" placeholder="如 2026010101">
+    </div>
+    <div class="form-row">
+      <label>姓名 *</label>
+      <input type="text" v-model.trim="form.name" placeholder="学生姓名">
+    </div>
+    <div class="form-row">
+      <label>性别 *</label>
+      <select v-model="form.gender">
+        <option value="男">男</option>
+        <option value="女">女</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>班级 *</label>
+      <select v-model="form.class_id">
+        <option value="">请选择班级</option>
+        <option v-for="c in classes" :key="c.class_id" :value="c.class_id">
+          {{ c.class_name }}（{{ c.class_code }}）
+        </option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>入学日期 *</label>
+      <input type="date" v-model="form.enroll_date">
+    </div>
+    <div class="form-row">
+      <label>学籍状态</label>
+      <select v-model="form.status">
+        <option value="在读">在读</option>
+        <option value="休学">休学</option>
+        <option value="毕业">毕业</option>
+        <option value="退学">退学</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label>联系电话</label>
+      <input type="text" v-model.trim="form.phone">
+    </div>
+    <div class="form-row">
+      <label>邮箱</label>
+      <input type="text" v-model.trim="form.email" placeholder="选填">
+    </div>
+    <div class="error" v-if="dialog.error" style="margin-top:8px">{{ dialog.error }}</div>
+    <div class="footer">
+      <button class="btn" @click="closeDialog">取消</button>
+      <button class="btn primary" @click="submit" :disabled="dialog.saving">
+        {{ dialog.saving ? '提交中…' : '保存' }}
+      </button>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script src="/vendor/vue.global.prod.js"></script>
+<script src="/vendor/axios.min.js"></script>
+<script src="/js/api.js"></script>
+<script src="/js/manage.js"></script>
+</body>
+</html>

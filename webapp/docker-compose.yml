@@ -1,0 +1,62 @@
+# =============================================================
+# 学生管理系统全栈编排（Vue3 + ECharts + Flask）
+#
+# 重要：复用环境中已有的 mysql 容器与 doris-fe 容器，本编排不创建数据库服务。
+# 本项目不新建任何库表：CRUD 直接写已有的 student_management.student，
+# 图表直接读已有的 student_sync.dwd_dim_student / ads_college_dashboard。
+# Flask / Vue 加入 dolphinscheduler 网络（按需求），同时接入 doris-st，
+# 保证容器内能解析 mysql:3306 与 doris-fe:9030 这两个服务名。
+#
+# 启动：bash /etc/docker/student-management/deploy.sh
+# 停止：docker compose down
+# =============================================================
+services:
+  flask:
+    build: ./backend
+    image: student-management-flask:1.0
+    container_name: student-flask
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: "000000"
+      MYSQL_DB: student_management
+      DORIS_HOST: doris-fe
+      DORIS_PORT: "9030"
+      DORIS_USER: root
+      DORIS_PASSWORD: "000000"
+      DORIS_DB: student_sync
+    networks:
+      - dolphinscheduler
+      - doris-st
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket;s=socket.create_connection(('127.0.0.1',8000),3);s.close()\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  vue:
+    build: ./frontend
+    image: student-management-vue:1.0
+    container_name: student-vue
+    ports:
+      - "8081:80"
+    depends_on:
+      - flask
+    networks:
+      - dolphinscheduler
+      - doris-st
+    restart: always
+
+networks:
+  dolphinscheduler:
+    external: true
+    name: dolphinscheduler
+  doris-st:
+    external: true
+    name: doris-st

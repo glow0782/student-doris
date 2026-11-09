@@ -1,0 +1,119 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Microsoft YaHei", "PingFang SC", -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  color: #25303f;
+  background: #f5f6f8;
+}
+a { color: inherit; text-decoration: none; }
+
+/* 顶部导航 */
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid #e3e6eb;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  gap: 28px;
+}
+.topbar .brand {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  margin-right: 12px;
+}
+.topbar nav { display: flex; gap: 4px; height: 100%; align-items: center; }
+.topbar nav a {
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  color: #5a6678;
+}
+.topbar nav a:hover { color: #2f6feb; }
+.topbar nav a.active { color: #2f6feb; border-bottom: 2px solid #2f6feb; font-weight: 600; }
+.topbar .env { margin-left: auto; color: #8a94a3; font-size: 12px; }
+
+.wrap { max-width: 1180px; margin: 24px auto; padding: 0 20px; }
+
+.card {
+  background: #fff;
+  border: 1px solid #e3e6eb;
+  padding: 20px 22px;
+  margin-bottom: 18px;
+}
+.card h2 { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
+.card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 16px;
+}
+.card-head h2 { margin: 0; }
+
+/* 工具条 */
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+input[type=text], input[type=number], input[type=date], select {
+  height: 34px; padding: 0 10px;
+  border: 1px solid #d5d9e0; background: #fff;
+  color: #25303f; outline: none; min-width: 150px;
+}
+input:focus, select:focus { border-color: #2f6feb; }
+
+.btn {
+  height: 34px; padding: 0 14px; cursor: pointer;
+  border: 1px solid #d5d9e0; background: #fff; color: #25303f;
+  font-size: 13px;
+}
+.btn:hover { border-color: #2f6feb; color: #2f6feb; }
+.btn.primary { background: #2f6feb; border-color: #2f6feb; color: #fff; }
+.btn.primary:hover { background: #255ecb; }
+.btn.danger { color: #b93a32; border-color: #e6c4c1; }
+.btn.danger:hover { background: #fdf3f2; }
+.btn.small { height: 28px; padding: 0 10px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 表格 */
+table { width: 100%; border-collapse: collapse; }
+th, td {
+  padding: 10px 12px; text-align: left;
+  border-bottom: 1px solid #eceff3; white-space: nowrap;
+}
+th { background: #f7f8fa; font-weight: 600; color: #4a5666; font-size: 13px; }
+tbody tr:hover { background: #fafbfd; }
+td.actions { display: flex; gap: 8px; }
+
+.tag {
+  display: inline-block; padding: 2px 8px; font-size: 12px;
+  border: 1px solid #dde3ec; background: #f7f9fc;
+}
+.tag.f { border-color: #f0d6df; background: #fdf5f8; color: #a4506b; }
+.muted { color: #8a94a3; }
+.empty { padding: 36px 0; text-align: center; color: #8a94a3; }
+.error { color: #b93a32; }
+.notice { padding: 10px 12px; border: 1px solid #f0d6a8; background: #fdf9ef; margin-bottom: 14px; }
+
+/* 弹窗 */
+.mask {
+  position: fixed; inset: 0; background: rgba(20,28,40,.42);
+  display: flex; align-items: center; justify-content: center; z-index: 20;
+}
+.dialog { width: 440px; background: #fff; border: 1px solid #d9dee6; padding: 22px 24px; }
+.dialog h3 { margin: 0 0 18px; font-size: 16px; }
+.form-row { margin-bottom: 14px; }
+.form-row label { display: block; margin-bottom: 6px; color: #5a6678; font-size: 13px; }
+.form-row input, .form-row select { width: 100%; }
+.dialog .footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* 大屏 */
+.chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+.chart-box { height: 360px; width: 100%; }
+.stat-line { display: flex; gap: 26px; align-items: center; flex-wrap: wrap; }
+.stat-line .kv { color: #5a6678; font-size: 13px; }
+.stat-line .kv b { color: #25303f; font-size: 16px; margin-left: 6px; }
+.switch { display: inline-flex; align-items: center; gap: 6px; color: #5a6678; font-size: 13px; cursor: pointer; }
+.switch input { cursor: pointer; }
+.pager {
+  display: flex; align-items: center; gap: 10px; justify-content: flex-end;
+  padding: 14px 2px 2px; margin-top: 10px; border-top: 1px solid #eef1f5;
+}
+.pager .muted { margin-right: auto; }
